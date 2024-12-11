@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block body %}
+<header class="bg-gray-900 p-4 text-white">
+    <div class="text-xl font-mono">
+        0x646a
+    </div>
+</header>
+
+<div x-data="articleGrid()" class="p-4">
+    <div class="space-y-4">
+        <template x-for="article in articles" :key="article.id">
+            <div class="m-12 font-mono bg-gray-900 text-white shadow-md p-4 hover:bg-gray-800 hover:scale-105 hover:shadow-lg transition-all duration-300">
+                <a :href="article.slug">
+                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold select-none" x-text="formatTitle(article.title)"></h1>
+                    <span class="text-gray-400 select-none" x-text="formatDate(article.created_at)"></span>
+                </a>
+            </div>             
+        </template>
+    </div>
+
+    <div x-show="loading" class="fixed inset-0 flex items-center justify-center bg-gray-700 bg-opacity-50 text-white">
+        <span class="text-xl">Carregando...</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    function articleGrid() {
+        return {
+            articles: [],
+            page: 1,
+            loading: false,
+            hasMore: true,
+            init() {
+                this.loadArticles();
+                window.addEventListener('scroll', this.handleScroll.bind(this));
+            },
+            async loadArticles() {
+                if (this.loading || !this.hasMore) return;
+                this.loading = true;
+                try {
+                    const response = await window.axios.get(`/api/articles/?page=${this.page}`);
+                    const newArticles = response.data.results.map(article => ({
+                        ...article,
+                        content: article.content // Assuming the content is already HTML or plain text
+                    }));
+                    this.articles = this.articles.concat(newArticles);
+                    this.hasMore = response.data.next !== null;
+                    this.page += 1;
+                } catch (error) {
+                    console.error('Error loading articles:', error);
+                } finally {
+                    this.loading = false;
+                }
+            },
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                return date.toLocaleDateString(undefined, options);
+            },
+            formatTitle(titleString) {
+                if (titleString.length > 16) {
+                    return titleString.slice(0, 16) + "...";
+                }
+                return titleString
+            },
+            handleScroll() {
+                const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    this.loadArticles();
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

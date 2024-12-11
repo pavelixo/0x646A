@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block body %}
+<header class="bg-gray-900 p-4 text-white">
+    <div class="text-xl font-mon">
+        {{ article.title }}
+    </div>
+</header>
+
+<div class="m-5" x-data="markdownLoader()" x-init="loadMarkdown()">
+    <div class="markdown-content" x-html="renderedMarkdown"></div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    function markdownLoader() {
+        return {
+            renderedMarkdown: '',
+            loadMarkdown() {
+                fetch('/api/articles/{{ article.slug }}')
+                    .then(response => response.json())
+                    .then(article => {
+                        let markdownUrl = article.content.replace('http://', 'https://');
+                        fetch(markdownUrl)
+                            .then(response => response.text())
+                            .then(markdown => {
+                                this.renderedMarkdown = marked(markdown);
+                            })
+                            .catch(error => console.error('Error loading markdown:', error));
+                    })
+                    .catch(error => console.error('Error loading article:', error));
+            }
+        }
+    }
+</script>
+{% endblock %}
